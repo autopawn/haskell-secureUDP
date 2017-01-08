@@ -15,6 +15,25 @@ import qualified System.CPUTime as T
 import qualified Network.Socket as So hiding (send, sendTo, recv, recvFrom)
 import qualified Network.Socket.ByteString as B
 
+getReceived :: C.MVar ChannelStatus -> IO ([(So.SockAddr,Bs.ByteString)])
+getReceived mchst = do
+    chst <- C.takeMVar mchst
+    let chst' = chst {recvMsgs = []}
+    C.putMVar mchst chst'
+    return (recvMsgs chst)
+
+getLoss :: C.MVar ChannelStatus -> IO ([(So.SockAddr,Bs.ByteString)])
+getLoss mchst = do
+    chst <- C.takeMVar mchst
+    let chst' = chst {unsentMsgs = S.empty}
+    C.putMVar mchst chst'
+    return (map (\(Message _ addr str _ _) -> (addr,str)) $ S.toList $ unsentMsgs chst)
+
+sendMessages :: C.MVar ChannelStatus -> [(So.SockAddr,Bs.ByteString)] -> IO ()
+sendMessages mchst msgs = do
+    chst <- C.takeMVar mchst
+    let chst' = foldr queueMsg chst' msgs
+    C.putMVar mchst chst'
 
 startChannel :: ChannelConfig -> IO (C.MVar ChannelStatus)
 -- ^ Starts a sending and a receiving threads for the protocol, returns an MVar that can be used
