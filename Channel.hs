@@ -2,6 +2,8 @@ module Channel where
 
 import Auxiliars
 
+import qualified Control.Concurrent as C
+
 import qualified Data.ByteString as Bs
 import qualified Data.Set as S
 
