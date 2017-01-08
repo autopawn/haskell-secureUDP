@@ -1,5 +1,6 @@
 module Subprotocol (
-    startChannel
+    startChannel,
+    ChannelConfig(..)
 ) where
 
 import Auxiliars
@@ -40,7 +41,7 @@ sendingChannel chcfg mchst = do
 receptionChannel :: ChannelConfig -> C.MVar ChannelStatus -> IO ()
 -- ^ Execution that receives messages and returns their ACKs.
 receptionChannel chcfg mchst = do
-    (bString,sAddr) <- B.recvFrom (socket chcfg) 512
+    (bString,sAddr) <- B.recvFrom (socket chcfg) (maxPacketSize chcfg + 4)
     if (allowed chcfg) sAddr then
         let (kind,ide,msg) = bstrKind bString
         in if kind=='m' then do
