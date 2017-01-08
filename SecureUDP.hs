@@ -1,6 +1,9 @@
-module Subprotocol (
+module SecureUDP (
     startChannel,
-    ChannelConfig(..)
+    ChannelConfig(..),
+    getReceived,
+    getLoss,
+    sendMessages
 ) where
 
 import Auxiliars
