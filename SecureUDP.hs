@@ -3,7 +3,8 @@ module SecureUDP (
     ChannelConfig(..),
     getReceived,
     getLoss,
-    sendMessages
+    sendMessages,
+    ChannelSt
 ) where
 
 import Auxiliars
@@ -17,6 +18,8 @@ import qualified System.CPUTime as T
 
 import qualified Network.Socket as So hiding (send, sendTo, recv, recvFrom)
 import qualified Network.Socket.ByteString as B
+
+type ChannelSt = C.MVar ChannelStatus
 
 getReceived :: C.MVar ChannelStatus -> IO ([(So.SockAddr,Bs.ByteString)])
 getReceived mchst = do
@@ -35,7 +38,7 @@ getLoss mchst = do
 sendMessages :: C.MVar ChannelStatus -> [(So.SockAddr,Bs.ByteString)] -> IO ()
 sendMessages mchst msgs = do
     chst <- C.takeMVar mchst
-    let chst' = foldr queueMsg chst' msgs
+    let chst' = foldr queueMsg chst msgs
     C.putMVar mchst chst'
 
 startChannel :: ChannelConfig -> IO (C.MVar ChannelStatus)
@@ -76,5 +79,5 @@ receptionChannel chcfg mchst = do
             let chst' = registerACK sAddr ide chst
             C.putMVar mchst chst'
         else return ()
-    else return()
+    else return ()
     receptionChannel chcfg mchst
