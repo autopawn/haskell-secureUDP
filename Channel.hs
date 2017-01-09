@@ -1,14 +1,9 @@
 module Channel where
 
-import Auxiliars
-
-import qualified Control.Concurrent as C
-
 import qualified Data.ByteString as Bs
 import qualified Data.Set as S
 
 import qualified Network.Socket as So hiding (send, sendTo, recv, recvFrom)
-import qualified Network.Socket.ByteString as B
 
 data ChannelConfig = ChannelConfig {
     socket :: So.Socket,
@@ -23,7 +18,7 @@ data ChannelStatus = ChannelStatus {
     sentMsgs :: S.Set Message, -- unACKed sent messages.
     unsentMsgs :: S.Set Message,
     recvMsgs :: [(So.SockAddr,Bs.ByteString)]
-}
+} deriving (Show)
 
 data Message = Message {
     msgId :: Int,
@@ -31,12 +26,12 @@ data Message = Message {
     string :: Bs.ByteString,
     lastSend :: Integer,
     resends :: Int
-}
+} deriving (Show)
 
 instance Eq Message where
     (==) m1 m2 = msgId m1 == msgId m2 && address m1 == address m2
 instance Ord Message where
-    compare m1 m2 = compare (msgId m1) (msgId m2)
+    compare m1 m2 = compare (msgId m1, address m1) (msgId m2, address m2)
 
 emptyChannel :: ChannelStatus
 emptyChannel = ChannelStatus 0 S.empty S.empty []
@@ -49,8 +44,8 @@ receiveMsg msg chst =
 registerACK :: So.SockAddr -> Int -> ChannelStatus -> ChannelStatus
 -- ^ Informs the ChannelStatus that it no longer needs to store the package from the address with
 -- the given id , since it was ACKed from the remote host.
-registerACK addr msgId chst = chst {
-        sentMsgs = S.delete (Message msgId addr Bs.empty 0 0) (sentMsgs chst)
+registerACK addr mId chst = chst {
+        sentMsgs = S.delete (Message mId addr Bs.empty 0 0) (sentMsgs chst)
     }
 
 queueMsg :: (So.SockAddr,Bs.ByteString) -> ChannelStatus -> ChannelStatus

@@ -8,6 +8,7 @@ import qualified System.IO as SI
 import Auxiliars
 import SecureUDP
 
+main :: IO ()
 main = do
     SI.hSetBuffering SI.stdout SI.NoBuffering
     putStrLn "Insert port (e.g. \"7272\"):"
@@ -41,11 +42,11 @@ terminal mchst = do
 readSockAddr :: String -> So.SockAddr
 readSockAddr str = let
     (dir,_:port) = span (/=':') str
-    [a,b,c,d] = map (char2word8 . head) $ splitWith '.' dir
+    [a,b,c,d] = map read $ splitWith '.' dir
     in So.SockAddrInet (read port) $ So.tupleToHostAddress (a,b,c,d)
 
 splitWith :: Char -> String -> [String]
-splitWith sep "" = [""]
+splitWith _ "" = [""]
 splitWith sep (n:str) =
     if n == sep then
         [] : splitWith sep str

@@ -46,8 +46,8 @@ startChannel :: ChannelConfig -> IO (C.MVar ChannelStatus)
 -- to insert and extract messages.
 startChannel chcfg = do
     mchst <- C.newMVar emptyChannel
-    recvThId <- C.forkIO (receptionChannel chcfg mchst)
-    sendThId <- C.forkIO (sendingChannel chcfg mchst)
+    _ <- C.forkIO (receptionChannel chcfg mchst)
+    _ <- C.forkIO (sendingChannel chcfg mchst)
     return mchst
 
 sendingChannel :: ChannelConfig ->  C.MVar ChannelStatus -> IO ()
@@ -70,7 +70,7 @@ receptionChannel chcfg mchst = do
     if (allowed chcfg) sAddr then
         let (kind,ide,msg) = bstrKind bString
         in if kind=='m' then do
-            B.sendTo (socket chcfg) (Bs.pack $ char2word8 'a' : dataInt ide) sAddr
+            _ <- B.sendTo (socket chcfg) (Bs.pack $ char2word8 'a' : dataInt ide) sAddr
             chst <- C.takeMVar mchst
             let chst' = receiveMsg (sAddr,msg) chst
             C.putMVar mchst chst'
