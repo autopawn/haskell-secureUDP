@@ -17,4 +17,7 @@ cabal.sandbox.config
 *.eventlog
 .stack-work/
 cabal.project.local
+
+# Done my me
 *.exe
+*.ps

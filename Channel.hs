@@ -15,8 +15,8 @@ data ChannelConfig = ChannelConfig {
 
 data ChannelStatus = ChannelStatus {
     nextId :: Int,
-    sentMsgs :: S.Set Message, -- unACKed sent messages.
-    unsentMsgs :: S.Set Message,
+    sentMsgs :: !(S.Set Message), -- unACKed sent messages.
+    unsentMsgs :: !(S.Set Message),
     recvMsgs :: [(So.SockAddr,Bs.ByteString)]
 } deriving (Show)
 
@@ -63,5 +63,5 @@ nextForSending chcfg time chst = let
     touted' = S.map (\m -> m {lastSend = time, resends = resends m + 1}) touted
     (ready,failed) = S.partition (\m -> resends m <= maxResends chcfg) touted'
     updatedMsgs = S.union ready $ S.difference (sentMsgs chst) failed
-    in (ready,
-        chst {sentMsgs = updatedMsgs, unsentMsgs = S.union failed (unsentMsgs chst)})
+    chst' = chst {sentMsgs = updatedMsgs, unsentMsgs = S.union failed (unsentMsgs chst)}
+    in (ready,chst')
