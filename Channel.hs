@@ -14,18 +14,18 @@ data ChannelConfig = ChannelConfig {
 }
 
 data ChannelStatus = ChannelStatus {
-    nextId :: Int,
+    nextId :: !Int,
     sentMsgs :: !(S.Set Message), -- unACKed sent messages.
     unsentMsgs :: !(S.Set Message),
-    recvMsgs :: [(So.SockAddr,Bs.ByteString)]
+    recvMsgs :: ![(So.SockAddr,Bs.ByteString)]
 } deriving (Show)
 
 data Message = Message {
-    msgId :: Int,
-    address :: So.SockAddr,
-    string :: Bs.ByteString,
-    lastSend :: Integer,
-    resends :: Int
+    msgId :: !Int,
+    address :: !So.SockAddr,
+    string :: !Bs.ByteString,
+    lastSend :: !Integer,
+    resends :: !Int
 } deriving (Show)
 
 instance Eq Message where
