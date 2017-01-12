@@ -1,8 +1,8 @@
 module SecureUDP (
     startChannel, closeChannel, checkClosed,
     ChannelConfig(..),
-    getReceived, lookReceived,
-    getLoss, lookLoss,
+    getReceived,
+    getLoss,
     sendMessages, channelConf,
     ChannelSt
 ) where
@@ -33,24 +33,12 @@ getReceived (_,mchst) = do
     C.putMVar mchst $! chst'
     return (recvMsgs chst)
 
-lookReceived :: ChannelSt -> IO ([(So.SockAddr,Bs.ByteString)])
--- ^ Get the received messages but doens't erases them.
-lookReceived (_,mchst) = do
-    chst <- C.readMVar mchst
-    return (recvMsgs chst)
-
 getLoss :: ChannelSt -> IO ([(So.SockAddr,Bs.ByteString)])
 -- ^ Get the messages that weren't ACKed from the target recipent host and erases them.
 getLoss (_,mchst) = do
     chst <- C.takeMVar mchst
     let chst' = chst {unsentMsgs = S.empty}
     C.putMVar mchst $! chst'
-    return (map (\(Message _ addr str _ _) -> (addr,str)) $ S.toList $ unsentMsgs chst)
-
-lookLoss :: ChannelSt -> IO ([(So.SockAddr,Bs.ByteString)])
--- ^ Get the messages that weren't ACKed from the target recipent but doens't erases them.
-lookLoss (_,mchst) = do
-    chst <- C.readMVar mchst
     return (map (\(Message _ addr str _ _) -> (addr,str)) $ S.toList $ unsentMsgs chst)
 
 sendMessages :: ChannelSt -> [(So.SockAddr,Bs.ByteString)] -> IO (Bool)
