@@ -22,9 +22,11 @@ import qualified Network.Socket.ByteString as B
 type ChannelSt = (ChannelConfig, C.MVar ChannelStatus)
 
 channelConf :: ChannelSt -> ChannelConfig
+-- ^ The configuration that was used to start the given channel.
 channelConf (chcfg,_) = chcfg
 
 getReceived :: ChannelSt -> IO ([(So.SockAddr,Bs.ByteString)])
+-- ^ Get the received messages and erases them.
 getReceived (_,mchst) = do
     chst <- C.takeMVar mchst
     let chst' = chst {recvMsgs = []}
@@ -32,11 +34,13 @@ getReceived (_,mchst) = do
     return (recvMsgs chst)
 
 lookReceived :: ChannelSt -> IO ([(So.SockAddr,Bs.ByteString)])
+-- ^ Get the received messages but doens't erases them.
 lookReceived (_,mchst) = do
     chst <- C.readMVar mchst
     return (recvMsgs chst)
 
 getLoss :: ChannelSt -> IO ([(So.SockAddr,Bs.ByteString)])
+-- ^ Get the messages that weren't ACKed from the target recipent host and erases them.
 getLoss (_,mchst) = do
     chst <- C.takeMVar mchst
     let chst' = chst {unsentMsgs = S.empty}
@@ -44,11 +48,14 @@ getLoss (_,mchst) = do
     return (map (\(Message _ addr str _ _) -> (addr,str)) $ S.toList $ unsentMsgs chst)
 
 lookLoss :: ChannelSt -> IO ([(So.SockAddr,Bs.ByteString)])
+-- ^ Get the messages that weren't ACKed from the target recipent but doens't erases them.
 lookLoss (_,mchst) = do
     chst <- C.readMVar mchst
     return (map (\(Message _ addr str _ _) -> (addr,str)) $ S.toList $ unsentMsgs chst)
 
 sendMessages :: ChannelSt -> [(So.SockAddr,Bs.ByteString)] -> IO (Bool)
+-- ^ Trought the given channel, send packages to the given addresses and message bytestrings.
+-- Returns False if the channel has being closed.
 sendMessages (chcfg,mchst) msgs = do
     chst <- C.takeMVar mchst
     if not (closed chst) then let
@@ -71,6 +78,7 @@ startChannel chcfg = do
     return (chcfg, mchst)
 
 closeChannel :: ChannelSt -> IO ()
+-- ^ Terminates a channel, ending its threads and making it unable to send or receive messages.
 closeChannel (_,mchst) = do
     chst <- C.takeMVar mchst
     if not (closed chst) then do
@@ -82,6 +90,7 @@ closeChannel (_,mchst) = do
         C.putMVar mchst $! chst
 
 checkClosed :: C.MVar ChannelStatus -> IO (Bool)
+-- ^ Check if the given channel has been closed.
 checkClosed mchst = do
     chst <- C.readMVar mchst
     return (closed chst)
