@@ -35,7 +35,9 @@ terminal mchst = do
     line <- Bs.getLine
     if line /= Bs.empty then let
         (dir,msg) = Bs.span ((char2word8 ' ') /=) line
-        in sendMessages mchst [(readSockAddr $ map word82char $ Bs.unpack dir, Bs.tail msg)]
+        in do
+            _ <- sendMessages mchst [(readSockAddr $ map word82char $ Bs.unpack dir, Bs.tail msg)]
+            return ()
     else return()
     terminal mchst
 

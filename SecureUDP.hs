@@ -19,49 +19,72 @@ import qualified System.CPUTime as T
 import qualified Network.Socket as So hiding (send, sendTo, recv, recvFrom)
 import qualified Network.Socket.ByteString as B
 
-type ChannelSt = C.MVar ChannelStatus
+type ChannelSt = (ChannelConfig, C.MVar ChannelStatus)
 
-getReceived :: C.MVar ChannelStatus -> IO ([(So.SockAddr,Bs.ByteString)])
-getReceived mchst = do
+channelConf :: ChannelSt -> ChannelConfig
+channelConf (chcfg,_) = chcfg
+
+getReceived :: ChannelSt -> IO ([(So.SockAddr,Bs.ByteString)])
+getReceived (_,mchst) = do
     chst <- C.takeMVar mchst
     let chst' = chst {recvMsgs = []}
     C.putMVar mchst $! chst'
     return (recvMsgs chst)
 
-lookReceived :: C.MVar ChannelStatus -> IO ([(So.SockAddr,Bs.ByteString)])
-lookReceived mchst = do
-    chst <- C.takeMVar mchst
-    C.putMVar mchst $! chst
+lookReceived :: ChannelSt -> IO ([(So.SockAddr,Bs.ByteString)])
+lookReceived (_,mchst) = do
+    chst <- C.readMVar mchst
     return (recvMsgs chst)
 
-getLoss :: C.MVar ChannelStatus -> IO ([(So.SockAddr,Bs.ByteString)])
-getLoss mchst = do
+getLoss :: ChannelSt -> IO ([(So.SockAddr,Bs.ByteString)])
+getLoss (_,mchst) = do
     chst <- C.takeMVar mchst
     let chst' = chst {unsentMsgs = S.empty}
     C.putMVar mchst $! chst'
     return (map (\(Message _ addr str _ _) -> (addr,str)) $ S.toList $ unsentMsgs chst)
 
-lookLoss :: C.MVar ChannelStatus -> IO ([(So.SockAddr,Bs.ByteString)])
-lookLoss mchst = do
-    chst <- C.takeMVar mchst
-    C.putMVar mchst $! chst
+lookLoss :: ChannelSt -> IO ([(So.SockAddr,Bs.ByteString)])
+lookLoss (_,mchst) = do
+    chst <- C.readMVar mchst
     return (map (\(Message _ addr str _ _) -> (addr,str)) $ S.toList $ unsentMsgs chst)
 
-
-sendMessages :: C.MVar ChannelStatus -> [(So.SockAddr,Bs.ByteString)] -> IO ()
-sendMessages mchst msgs = do
+sendMessages :: ChannelSt -> [(So.SockAddr,Bs.ByteString)] -> IO (Bool)
+sendMessages (chcfg,mchst) msgs = do
     chst <- C.takeMVar mchst
-    let chst' = foldr queueMsg chst msgs
-    C.putMVar mchst $! chst'
+    if not (closed chst) then let
+        checkAndqueue m =
+            if Bs.length (snd m) <= maxPacketSize chcfg then queueMsg m
+            else error "Package exceeded maxPacketSize."
+        chst' = foldr checkAndqueue chst msgs
+        in (C.putMVar mchst $! chst') >> return (True)
+    else (C.putMVar mchst $! chst) >> return (False)
 
-startChannel :: ChannelConfig -> IO (C.MVar ChannelStatus)
+
+startChannel :: ChannelConfig -> IO (ChannelSt)
 -- ^ Starts a sending and a receiving threads for the protocol, returns an MVar that can be used
 -- to insert and extract messages.
 startChannel chcfg = do
-    mchst <- C.newMVar emptyChannel
-    _ <- C.forkIO (receptionChannel chcfg mchst)
-    _ <- C.forkIO (sendingChannel chcfg mchst)
-    return mchst
+    mchst <- C.newEmptyMVar
+    rtid <- C.forkIO (receptionChannel chcfg mchst)
+    stid <- C.forkIO (sendingChannel chcfg mchst)
+    C.putMVar mchst $! emptyChannel rtid stid
+    return (chcfg, mchst)
+
+closeChannel :: ChannelSt -> IO ()
+closeChannel (_,mchst) = do
+    chst <- C.takeMVar mchst
+    if not (closed chst) then do
+        C.killThread $ receivingThread chst
+        C.killThread $ sendingThread chst
+        let chst' = chst {closed = True}
+        C.putMVar mchst $! chst'
+    else
+        C.putMVar mchst $! chst
+
+checkClosed :: C.MVar ChannelStatus -> IO (Bool)
+checkClosed mchst = do
+    chst <- C.readMVar mchst
+    return (closed chst)
 
 sendingChannel :: ChannelConfig ->  C.MVar ChannelStatus -> IO ()
 -- ^ Execution that sends messages (if there are on the ChannelStatus).

@@ -3,6 +3,7 @@ module Channel where
 import qualified Data.ByteString as Bs
 import qualified Data.Set as S
 
+import qualified Control.Concurrent as C (ThreadId)
 import qualified Network.Socket as So hiding (send, sendTo, recv, recvFrom)
 
 data ChannelConfig = ChannelConfig {
@@ -17,7 +18,10 @@ data ChannelStatus = ChannelStatus {
     nextId :: !Int,
     sentMsgs :: !(S.Set Message), -- unACKed sent messages.
     unsentMsgs :: !(S.Set Message),
-    recvMsgs :: ![(So.SockAddr,Bs.ByteString)]
+    recvMsgs :: ![(So.SockAddr,Bs.ByteString)],
+    receivingThread :: !C.ThreadId,
+    sendingThread :: !C.ThreadId,
+    closed :: !Bool
 } deriving (Show)
 
 data Message = Message {
@@ -33,8 +37,8 @@ instance Eq Message where
 instance Ord Message where
     compare m1 m2 = compare (msgId m1, address m1) (msgId m2, address m2)
 
-emptyChannel :: ChannelStatus
-emptyChannel = ChannelStatus 0 S.empty S.empty []
+emptyChannel :: C.ThreadId -> C.ThreadId -> ChannelStatus
+emptyChannel rtid stid = ChannelStatus 0 S.empty S.empty [] rtid stid False
 
 receiveMsg :: (So.SockAddr,Bs.ByteString) -> ChannelStatus -> ChannelStatus
 -- ^ Queues a message that has been received.
