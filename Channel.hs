@@ -10,7 +10,7 @@ data ChannelConfig = ChannelConfig {
     socket :: So.Socket,
     resendTimeout :: Integer,
     maxResends :: Int,
-    allowed :: So.SockAddr -> Bool,
+    allowed :: So.SockAddr -> IO(Bool),
     maxPacketSize :: Int
 }
 

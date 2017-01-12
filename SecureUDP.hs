@@ -3,7 +3,7 @@ module SecureUDP (
     ChannelConfig(..),
     getReceived, lookReceived,
     getLoss, lookLoss,
-    sendMessages,
+    sendMessages, channelConf,
     ChannelSt
 ) where
 
@@ -103,7 +103,8 @@ receptionChannel :: ChannelConfig -> C.MVar ChannelStatus -> IO ()
 -- ^ Execution that receives messages and returns their ACKs.
 receptionChannel chcfg mchst = do
     (bString,sAddr) <- B.recvFrom (socket chcfg) (maxPacketSize chcfg + 4)
-    if (allowed chcfg) sAddr then
+    addrAllowed <- (allowed chcfg) sAddr
+    if addrAllowed then
         let (kind,ide,msg) = bstrKind bString
         in if kind=='m' then do
             _ <- B.sendTo (socket chcfg) (Bs.pack $ char2word8 'a' : dataInt ide) sAddr

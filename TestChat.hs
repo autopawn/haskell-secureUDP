@@ -19,7 +19,7 @@ main = do
             socket = sock,
             resendTimeout = 280000000000, -- 0.28 seconds.
             maxResends = 5,
-            allowed = (\_ -> True), -- Allow any incomming address.
+            allowed = (\_ -> return (True)), -- Allow any incomming address.
             maxPacketSize = 500
         }
     mchst <- startChannel chcfg
