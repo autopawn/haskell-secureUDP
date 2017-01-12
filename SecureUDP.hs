@@ -1,8 +1,8 @@
 module SecureUDP (
-    startChannel,
+    startChannel, closeChannel, checkClosed,
     ChannelConfig(..),
-    getReceived,
-    getLoss,
+    getReceived, lookReceived,
+    getLoss, lookLoss,
     sendMessages,
     ChannelSt
 ) where
