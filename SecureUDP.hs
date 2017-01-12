@@ -28,12 +28,25 @@ getReceived mchst = do
     C.putMVar mchst $! chst'
     return (recvMsgs chst)
 
+lookReceived :: C.MVar ChannelStatus -> IO ([(So.SockAddr,Bs.ByteString)])
+lookReceived mchst = do
+    chst <- C.takeMVar mchst
+    C.putMVar mchst $! chst
+    return (recvMsgs chst)
+
 getLoss :: C.MVar ChannelStatus -> IO ([(So.SockAddr,Bs.ByteString)])
 getLoss mchst = do
     chst <- C.takeMVar mchst
     let chst' = chst {unsentMsgs = S.empty}
     C.putMVar mchst $! chst'
     return (map (\(Message _ addr str _ _) -> (addr,str)) $ S.toList $ unsentMsgs chst)
+
+lookLoss :: C.MVar ChannelStatus -> IO ([(So.SockAddr,Bs.ByteString)])
+lookLoss mchst = do
+    chst <- C.takeMVar mchst
+    C.putMVar mchst $! chst
+    return (map (\(Message _ addr str _ _) -> (addr,str)) $ S.toList $ unsentMsgs chst)
+
 
 sendMessages :: C.MVar ChannelStatus -> [(So.SockAddr,Bs.ByteString)] -> IO ()
 sendMessages mchst msgs = do
