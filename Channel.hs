@@ -16,7 +16,7 @@ data ChannelConfig = ChannelConfig {
 
 data ChannelStatus = ChannelStatus {
     nextId :: !Int,
-    sentMsgs :: !(S.Set Message), -- unACKed sent messages.
+    sentMsgs :: !(S.Set Message),
     unsentMsgs :: !(S.Set Message),
     recvMsgs :: ![(So.SockAddr,Bs.ByteString)],
     receivingThread :: !C.ThreadId,
