@@ -1,9 +1,50 @@
+{-|
+Module      : SecureUDP
+Description : Main module of the SecureUDP package.
+Copyright   : (c) Francisco Casas Barrientos, 2017
+License     : MIT
+Maintainer  : franciscojacb@gmail.com
+Stability   : experimental
+Portability : POSIX
+
+The main module contains all the operations needed to create a channel and send or receive packages.
+
+@
+import qualified Network.Socket as So
+import qualified System.IO as SI
+
+main = do
+    -- This is needed so lazyness doens't mess with inner thread communication.
+    SI.hSetBuffering SI.stdout SI.NoBuffering
+    -- Create the socket:
+    sock <- So.socket So.AF_INET So.Datagram So.defaultProtocol
+    -- Bind the socket to the address 0.0.0.0 so it can receive packages from everywhere.
+    let port = 7272
+    let address = So.tupleToHostAddress (0,0,0,0)
+    So.bind sock (So.SockAddrInet port address)
+    -- Create the configuration for a new channel,
+    -- this values should be OK for most purposes:
+    let chcfg = ChannelConfig {
+            socket = sock,
+            resendTimeout = 280000000000, -- 0.28 seconds.
+            maxResends = 5,
+            allowed = (\_ -> return (True)), -- Allow any incomming address.
+            maxPacketSize = 500,
+            recvRetention = 16
+        }
+    -- Start the channel with the given configuration:
+    mchst <- startChannel chcfg
+@
+-}
 module SecureUDP (
-    startChannel, closeChannel, checkClosed,
+    -- * Channel configuration
     ChannelConfig(..),
+    -- * Channel control
+    startChannel, closeChannel, checkClosed, channelConf,
+    -- * Channel manipulation
     getReceived,
     getLoss,
-    sendMessages, channelConf,
+    sendMessages,
     ChannelSt
 ) where
 
@@ -26,7 +67,7 @@ channelConf :: ChannelSt -> ChannelConfig
 channelConf (chcfg,_) = chcfg
 
 getReceived :: ChannelSt -> IO ([(So.SockAddr,Bs.ByteString)])
--- ^ Get the received messages and erases them.
+-- ^ Get the received messages and their sender addresses, then erases them.
 -- It's important that your program calls this once in a while or the packages will remain in memory.
 getReceived (chcfg,mchst) = do
     chst <- C.takeMVar mchst
@@ -60,7 +101,7 @@ sendMessages (chcfg,mchst) msgs = do
 
 
 startChannel :: ChannelConfig -> IO (ChannelSt)
--- ^ Starts a sending and a receiving threads for the protocol, returns an MVar that can be used
+-- ^ Starts a sending and a receiving threads for the protocol, returns a channel that can be used
 -- to insert and extract messages.
 startChannel chcfg = do
     mchst <- C.newEmptyMVar
@@ -81,9 +122,9 @@ closeChannel (_,mchst) = do
     else
         C.putMVar mchst $! chst
 
-checkClosed :: C.MVar ChannelStatus -> IO (Bool)
+checkClosed :: ChannelSt -> IO (Bool)
 -- ^ Check if the given channel has been closed.
-checkClosed mchst = do
+checkClosed (_,mchst) = do
     chst <- C.readMVar mchst
     return (closed chst)
 

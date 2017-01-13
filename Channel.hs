@@ -8,11 +8,24 @@ import qualified Network.Socket as So hiding (send, sendTo, recv, recvFrom)
 
 data ChannelConfig = ChannelConfig {
     socket :: So.Socket,
+    -- ^ The UDP Socket from Network.Socket that the channel will use to send and receive
+    -- messages.
     resendTimeout :: Integer,
+    -- ^ Picoseconds after a package is re-send if no ACK for it is received.
     maxResends :: Int,
+    -- ^ Times that the same package can be re-sended without ACK after considerating it
+    -- lost.
     allowed :: So.SockAddr -> IO(Bool),
+    -- ^ Function used to determinate if accept or not incomming packages from the given
+    -- address.
     maxPacketSize :: Int,
+    -- ^ Max bytes that can be sent on this channel packages, larger packages will throw
+    -- and exception.
     recvRetention :: Integer
+    -- ^ Time that a received and delivired package will remain on memory in order to avoid
+    -- duplicated receptions. The packages will be stored
+    -- @recvRetention *resendTimeout * maxResends@ picoseconds after reception and after
+    -- that, will be freed on the next getReceived call.
 }
 
 data ChannelStatus = ChannelStatus {
