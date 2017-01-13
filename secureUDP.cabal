@@ -17,7 +17,7 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     SecureUDP
-  -- other-modules:
+  other-modules:       Channel, Auxiliars
   -- other-extensions:
   build-depends:       base >=4.8 && <4.9, bytestring >=0.10 && <0.11, containers >=0.5 && <0.6, network >=2.6 && <2.7
   -- hs-source-dirs:
