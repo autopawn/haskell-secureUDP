@@ -20,7 +20,8 @@ main = do
             resendTimeout = 280000000000, -- 0.28 seconds.
             maxResends = 5,
             allowed = (\_ -> return (True)), -- Allow any incomming address.
-            maxPacketSize = 500
+            maxPacketSize = 500,
+            recvRetention = 32
         }
     mchst <- startChannel chcfg
     terminal mchst
@@ -31,7 +32,7 @@ terminal mchst = do
     mapM_ (\(a,m) -> putStrLn $ show a ++ " says: " ++ show m) recvs
     loss <- getLoss mchst
     mapM_ (\(a,m) -> putStrLn $ show a ++ " didn't ACKed: " ++ show m) loss
-    putStrLn "Insert message (e.g. \"127.0.0.1:2000 Hello world!\"):"
+    putStrLn "Insert message (e.g. \"127.0.0.1:7373 Hello world!\"):"
     line <- Bs.getLine
     if line /= Bs.empty then let
         (dir,msg) = Bs.span ((char2word8 ' ') /=) line

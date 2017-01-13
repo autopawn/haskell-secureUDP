@@ -27,14 +27,18 @@ channelConf (chcfg,_) = chcfg
 
 getReceived :: ChannelSt -> IO ([(So.SockAddr,Bs.ByteString)])
 -- ^ Get the received messages and erases them.
-getReceived (_,mchst) = do
+-- It's important that your program calls this once in a while or the packages will remain in memory.
+getReceived (chcfg,mchst) = do
     chst <- C.takeMVar mchst
-    let chst' = chst {recvMsgs = []}
+    time <- T.getCPUTime
+    let (msgs,chst') = nextForDeliver chcfg time chst
     C.putMVar mchst $! chst'
-    return (recvMsgs chst)
+    return (S.toList $ S.map (\m -> (address m, string m)) msgs)
 
 getLoss :: ChannelSt -> IO ([(So.SockAddr,Bs.ByteString)])
--- ^ Get the messages that weren't ACKed from the target recipent host and erases them.
+-- ^ Get the messages that weren't ACKed from the target recipent host and erases them. Useful to detect
+-- missing connections.
+-- It's also important that your program calls this once in a while or the packages will remain in memory.
 getLoss (_,mchst) = do
     chst <- C.takeMVar mchst
     let chst' = chst {unsentMsgs = S.empty}
@@ -106,7 +110,8 @@ receptionChannel chcfg mchst = do
         in if kind=='m' then do
             _ <- B.sendTo (socket chcfg) (Bs.pack $ char2word8 'a' : dataInt ide) sAddr
             chst <- C.takeMVar mchst
-            let chst' = receiveMsg (sAddr,msg) chst
+            time <- T.getCPUTime
+            let chst' = receiveMsg (Message ide sAddr msg time 0) chst
             C.putMVar mchst $! chst'
         else if kind=='a' then do
             chst <- C.takeMVar mchst

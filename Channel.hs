@@ -11,14 +11,16 @@ data ChannelConfig = ChannelConfig {
     resendTimeout :: Integer,
     maxResends :: Int,
     allowed :: So.SockAddr -> IO(Bool),
-    maxPacketSize :: Int
+    maxPacketSize :: Int,
+    recvRetention :: Integer
 }
 
 data ChannelStatus = ChannelStatus {
     nextId :: !Int,
     sentMsgs :: !(S.Set Message),
     unsentMsgs :: !(S.Set Message),
-    recvMsgs :: ![(So.SockAddr,Bs.ByteString)],
+    recvMsgs :: !(S.Set Message),
+    deliveredMsgs :: !(S.Set Message),
     receivingThread :: !C.ThreadId,
     sendingThread :: !C.ThreadId,
     closed :: !Bool
@@ -28,7 +30,7 @@ data Message = Message {
     msgId :: !Int,
     address :: !So.SockAddr,
     string :: !Bs.ByteString,
-    lastSend :: !Integer,
+    lastSend :: !Integer, -- or reception time in case of incomming messages.
     resends :: !Int
 } deriving (Show)
 
@@ -38,12 +40,14 @@ instance Ord Message where
     compare m1 m2 = compare (msgId m1, address m1) (msgId m2, address m2)
 
 emptyChannel :: C.ThreadId -> C.ThreadId -> ChannelStatus
-emptyChannel rtid stid = ChannelStatus 0 S.empty S.empty [] rtid stid False
+emptyChannel rtid stid = ChannelStatus 0 S.empty S.empty S.empty S.empty rtid stid False
 
-receiveMsg :: (So.SockAddr,Bs.ByteString) -> ChannelStatus -> ChannelStatus
+receiveMsg :: Message -> ChannelStatus -> ChannelStatus
 -- ^ Queues a message that has been received.
 receiveMsg msg chst =
-    chst {recvMsgs = msg : recvMsgs chst}
+    if S.notMember msg (deliveredMsgs chst) then
+        chst {recvMsgs = S.insert msg (recvMsgs chst)}
+    else chst
 
 registerACK :: So.SockAddr -> Int -> ChannelStatus -> ChannelStatus
 -- ^ Informs the ChannelStatus that it no longer needs to store the package from the address with
@@ -69,3 +73,12 @@ nextForSending chcfg time chst = let
     updatedMsgs = S.union ready $ S.difference (sentMsgs chst) failed
     chst' = chst {sentMsgs = updatedMsgs, unsentMsgs = S.union failed (unsentMsgs chst)}
     in (ready,chst')
+
+nextForDeliver :: ChannelConfig -> Integer -> ChannelStatus -> (S.Set Message, ChannelStatus)
+-- ^ Receives the current CPUTime and a ChannelStatus, returns the messages that can be delivered
+-- and cleans the old ones that where retained.
+nextForDeliver chcfg time chst = let
+    retenTime = recvRetention chcfg * resendTimeout chcfg * fromIntegral (maxResends chcfg)
+    survives m = time <= lastSend m + retenTime
+    newDelivered = S.difference (S.filter survives (deliveredMsgs chst)) (recvMsgs chst)
+    in (recvMsgs chst, chst {deliveredMsgs = newDelivered, recvMsgs = S.empty})

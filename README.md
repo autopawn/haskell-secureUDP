@@ -2,9 +2,9 @@
 
 Haskell module for secure UDP packet transfer.
 
-- Packets are guaranteed to be received (and as fast as possible).
-- Packets are NOT guaranteed to arrive in order.
-- Packets are NOT guaranteed to arrive just once.
+- Packets **ARE** guaranteed to be received (and as fast as possible) if there's a connection.
+- Packets **ARE** guaranteed to arrive just once.
+- Packets **ARE NOT** guaranteed to arrive in order.
 
 ## Notes:
 
