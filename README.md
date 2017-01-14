@@ -13,3 +13,4 @@ Haskell module for secure UDP packet transfer.
     however the packages could be dropped.
 - To avoid communication problems, all communicating channels should have the same ChannelConfig,
     except by the `socket` or the `allowed` function.
+- You can find the documentation on [hackage](http://hackage.haskell.org/package/secureUDP).
