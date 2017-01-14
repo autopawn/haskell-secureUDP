@@ -6,6 +6,7 @@ import qualified Data.Set as S
 import qualified Control.Concurrent as C (ThreadId)
 import qualified Network.Socket as So hiding (send, sendTo, recv, recvFrom)
 
+-- | Holds the configuration of a channel.
 data ChannelConfig = ChannelConfig {
     socket :: So.Socket,
     -- ^ The UDP Socket from Network.Socket that the channel will use to send and receive
@@ -23,9 +24,9 @@ data ChannelConfig = ChannelConfig {
     -- and exception.
     recvRetention :: Integer
     -- ^ Time that a received and delivired package will remain on memory in order to avoid
-    -- duplicated receptions. The packages will be stored
-    -- @recvRetention *resendTimeout * maxResends@ picoseconds after reception and after
-    -- that, will be freed on the next getReceived call.
+    -- duplicated receptions.
+    -- The packages will be stored @recvRetention *resendTimeout * maxResends@ picoseconds after
+    -- reception and after that, will be freed on the next getReceived call.
 }
 
 data ChannelStatus = ChannelStatus {

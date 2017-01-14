@@ -10,6 +10,8 @@ Portability : POSIX
 The main module contains all the operations needed to create a channel and send or receive packages.
 
 @
+import SecureUDP
+
 import qualified Network.Socket as So
 import qualified System.IO as SI
 
@@ -27,14 +29,23 @@ main = do
     let chcfg = ChannelConfig {
             socket = sock,
             resendTimeout = 280000000000, -- 0.28 seconds.
-            maxResends = 5,
+            maxResends = 8,
             allowed = (\_ -> return (True)), -- Allow any incomming address.
             maxPacketSize = 500,
-            recvRetention = 16
+            recvRetention = 10
         }
     -- Start the channel with the given configuration:
-    mchst <- startChannel chcfg
+    channel <- startChannel chcfg
+
+    -- ...
 @
+Then you can use the channel to send and receive messages from and to any address, using
+@sendMessages@ and @getReceived@.
+
+You can also use @getLoss@ to check which messages that you sent weren't ACKed.
+
+Make sure that you call @getReceived@ and @getLoss@ once in a while, even if you don't use them,
+so the messages won't accumulate in memory.
 -}
 module SecureUDP (
     -- * Channel configuration
@@ -60,6 +71,8 @@ import qualified System.CPUTime as T
 import qualified Network.Socket as So hiding (send, sendTo, recv, recvFrom)
 import qualified Network.Socket.ByteString as B
 
+-- | Represents the status of a channel, also holds, internally, information about the threads that
+-- it uses. After a channel is created, it is used as an argument for the main functions.
 type ChannelSt = (ChannelConfig, C.MVar ChannelStatus)
 
 channelConf :: ChannelSt -> ChannelConfig
@@ -68,6 +81,7 @@ channelConf (chcfg,_) = chcfg
 
 getReceived :: ChannelSt -> IO ([(So.SockAddr,Bs.ByteString)])
 -- ^ Get the received messages and their sender addresses, then erases them.
+--
 -- It's important that your program calls this once in a while or the packages will remain in memory.
 getReceived (chcfg,mchst) = do
     chst <- C.takeMVar mchst
@@ -79,6 +93,7 @@ getReceived (chcfg,mchst) = do
 getLoss :: ChannelSt -> IO ([(So.SockAddr,Bs.ByteString)])
 -- ^ Get the messages that weren't ACKed from the target recipent host and erases them. Useful to detect
 -- missing connections.
+--
 -- It's also important that your program calls this once in a while or the packages will remain in memory.
 getLoss (_,mchst) = do
     chst <- C.takeMVar mchst
@@ -88,7 +103,8 @@ getLoss (_,mchst) = do
 
 sendMessages :: ChannelSt -> [(So.SockAddr,Bs.ByteString)] -> IO (Bool)
 -- ^ Trought the given channel, send packages to the given addresses and message bytestrings.
--- Returns False if the channel has being closed.
+--
+-- Returns @False@ if the channel has being closed, @True@ otherwise.
 sendMessages (chcfg,mchst) msgs = do
     chst <- C.takeMVar mchst
     if not (closed chst) then let

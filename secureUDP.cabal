@@ -2,9 +2,19 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                secureUDP
-version:             0.1.1.0
-synopsis:            Module for secure (unsorted) UDP packet transfer.
--- description:
+version:             0.1.1.1
+synopsis:            Setups secure (unsorted) UDP packet transfer.
+description:
+    This simple module allows to send packages ensuring delivering over an UDP connection
+    using ACKs and timeouts under the hood, also setups the threads needed for listening
+    and sending, making them transparent to the user.
+    .
+    As the packages can be delivered just when they arrive, is not guarenteed that
+    they arrive in order.
+    .
+    Once a sent package has passed many timeouts without been ACKed from the recipient it
+    can be recognized as a lost package, meaning that the recipient cannot longer be
+    reached.
 license:             MIT
 license-file:        LICENSE
 author:              Francisco Javier Andrés Casas Barrientos
