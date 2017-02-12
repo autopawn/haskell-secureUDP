@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                secureUDP
-version:             0.1.1.1
+version:             0.1.1.4
 synopsis:            Setups secure (unsorted) UDP packet transfer.
 description:
     This simple module allows to send packages ensuring delivering over an UDP connection

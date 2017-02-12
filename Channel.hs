@@ -86,7 +86,7 @@ nextForSending chcfg time chst = let
     (ready,failed) = S.partition (\m -> resends m <= maxResends chcfg) touted'
     updatedMsgs = S.union ready $ S.difference (sentMsgs chst) failed
     chst' = chst {sentMsgs = updatedMsgs, unsentMsgs = S.union failed (unsentMsgs chst)}
-    in (ready,chst')
+    in seq touted' $ (ready,chst')
 
 nextForDeliver :: ChannelConfig -> Integer -> ChannelStatus -> (S.Set Message, ChannelStatus)
 -- ^ Receives the current CPUTime and a ChannelStatus, returns the messages that can be delivered

@@ -10,8 +10,7 @@ Portability : POSIX
 The main module contains all the operations needed to create a channel and send or receive packages.
 
 @
-import SecureUDP
-
+o
 import qualified Network.Socket as So
 import qualified System.IO as SI
 
